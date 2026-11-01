@@ -1,6 +1,5 @@
 import { useLocalSearchParams, router } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
-import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import {
   ScrollView,
   View,
@@ -9,6 +8,8 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   useAppStore,
@@ -47,7 +48,7 @@ export default function InvoiceEditorScreen() {
     [id, readOnly, updateInvoice],
   );
 
-  const patch = useDebouncedCallback(patchImmediate, 450);
+  const patch = patchImmediate;
 
   const onSerialChange = (invoiceNo: string) => {
     if (!id) return;
@@ -68,8 +69,16 @@ export default function InvoiceEditorScreen() {
   }
 
   return (
-    <View style={styles.flex}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="on-drag"
+      >
         {readOnly && (
           <View style={styles.banner}>
             <Text style={styles.bannerText}>Final invoice — duplicate from the list to edit.</Text>
@@ -221,7 +230,7 @@ export default function InvoiceEditorScreen() {
           else addItem(id!, item);
         }}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

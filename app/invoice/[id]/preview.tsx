@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { WebView } from 'react-native-webview';
+import { InvoiceHtmlPreview } from '@/components/InvoiceHtmlPreview';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAppStore, useInvoice, useTotals } from '@/store/useAppStore';
@@ -39,6 +39,13 @@ export default function InvoicePreviewScreen() {
 
   const html = useMemo(() => {
     if (!invoice || !totals) return '';
+    return renderInvoiceHtml(invoice, seller, settings, totals, 'ORIGINAL FOR RECIPIENT', {
+      screenPreview: true,
+    });
+  }, [invoice, seller, settings, totals]);
+
+  const printHtml = useMemo(() => {
+    if (!invoice || !totals) return '';
     return renderInvoiceHtml(invoice, seller, settings, totals);
   }, [invoice, seller, settings, totals]);
 
@@ -71,7 +78,7 @@ export default function InvoicePreviewScreen() {
       }
       setExporting(true);
       try {
-        await exportInvoicePdf(html, invoice.invoiceNo);
+        await exportInvoicePdf(printHtml, invoice.invoiceNo);
       } catch (e) {
         Alert.alert('Export failed', e instanceof Error ? e.message : 'Could not create PDF');
       } finally {
@@ -132,12 +139,7 @@ export default function InvoicePreviewScreen() {
 
   return (
     <View style={styles.flex}>
-      <WebView
-        originWhitelist={['*']}
-        source={{ html }}
-        style={styles.webview}
-        scalesPageToFit
-      />
+      <InvoiceHtmlPreview html={html} />
       <View style={styles.footer}>
         <Pressable
           style={[styles.btn, styles.btnSecondary]}
