@@ -1,0 +1,211 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`renderInvoiceHtml includes key template strings 1`] = `
+"<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+@page { size: A4; margin: 10mm; }
+* { box-sizing: border-box; }
+body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; margin: 0; color: #000; }
+.outer { border: 1px solid #000; }
+.band { border-bottom: 1px solid #000; }
+.band:last-child { border-bottom: none; }
+.title-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; }
+.title-bar h1 { margin: 0; font-size: 14pt; flex: 1; text-align: center; }
+.copy { font-size: 7pt; text-align: right; max-width: 120px; }
+.row2 { display: flex; }
+.col { flex: 1; padding: 6px 8px; border-right: 1px solid #000; }
+.col:last-child { border-right: none; }
+.seller-name { font-weight: bold; text-transform: uppercase; }
+.label { color: #666; font-size: 7pt; }
+.value { font-weight: bold; font-size: 8pt; }
+.grid { width: 100%; border-collapse: collapse; }
+.grid td { border: 1px solid #000; padding: 3px 5px; vertical-align: top; width: 50%; }
+.grid-cell .label { margin-bottom: 2px; }
+.section-label { color: #666; font-size: 7pt; margin-bottom: 4px; }
+.items { width: 100%; border-collapse: collapse; }
+.items th, .items td { border: 1px solid #000; padding: 3px 4px; font-size: 8pt; }
+.items th { background: #eee; color: #444; font-weight: normal; }
+.items thead { display: table-header-group; }
+.items tr { page-break-inside: avoid; }
+.c { text-align: center; }
+.r { text-align: right; }
+.totals-wrap { display: flex; border-top: 1px solid #000; }
+.totals-left { flex: 1; padding: 6px 8px; border-right: 1px solid #000; font-weight: bold; }
+.totals-right { width: 220px; }
+.totals-right table { width: 100%; border-collapse: collapse; }
+.totals-right td { border-bottom: 1px solid #000; padding: 4px 6px; }
+.totals-right .label-col { text-align: left; }
+.grand { display: flex; font-weight: bold; border-top: 1px solid #000; }
+.grand .g-label { flex: 1; padding: 6px 8px; border-right: 1px solid #000; }
+.grand .g-value { width: 220px; padding: 6px 8px; text-align: right; }
+.words { padding: 6px 8px; border-top: 1px solid #000; }
+.hsn-table { width: 100%; border-collapse: collapse; }
+.hsn-table th, .hsn-table td { border: 1px solid #000; padding: 3px 4px; font-size: 8pt; }
+.hsn-table th { background: #eee; }
+.hsn-table thead { display: table-header-group; }
+.bold { font-weight: bold; }
+.bank-row { display: flex; border-top: 1px solid #000; }
+.bank-left { flex: 1; padding: 6px 8px; border-right: 1px solid #000; }
+.bank-right { width: 220px; padding: 6px 8px; text-align: right; position: relative; min-height: 80px; }
+.signatory { position: absolute; bottom: 6px; right: 8px; font-size: 8pt; }
+.declaration { padding: 6px 8px; border-top: 1px solid #000; }
+.footer { text-align: center; font-weight: bold; font-size: 8pt; padding: 6px; border-top: 1px solid #000; }
+.after-items { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+<div class="outer">
+  <div class="band title-bar">
+    <div style="width:120px"></div>
+    <h1>TAX INVOICE</h1>
+    <div class="copy">ORIGINAL FOR RECIPIENT</div>
+  </div>
+
+  <div class="band row2">
+    <div class="col">
+      <div class="seller-name">M/S Mahavir</div>
+      
+      <div>Seller addr</div>
+      <div>GSTIN/UIN : 09ABCDE1234F1Z5</div>
+      <div>Phone : </div>
+      <div>State Name : 09, Uttar Pradesh</div>
+    </div>
+    <div class="col">
+      <table class="grid">
+        <tr>
+          <td class="grid-cell"><div class="label">Invoice No.</div><div class="value">ME260067</div></td>
+          <td class="grid-cell"><div class="label">Dated</div><div class="value">2026-01-15</div></td>
+        </tr>
+        <tr>
+          <td class="grid-cell"><div class="label">Delivery Note</div><div class="value"></div></td>
+          <td class="grid-cell"><div class="label">Mode / Terms of Payment</div><div class="value">CASH</div></td>
+        </tr>
+        <tr>
+          <td class="grid-cell"><div class="label">Reference No. &amp; Date</div><div class="value"></div></td>
+          <td class="grid-cell"><div class="label">Other References</div><div class="value"></div></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="band row2">
+    <div class="col">
+      <div class="section-label">BUYER (BILL TO)</div>
+      <div class="seller-name">M/S Buyer Co</div>
+      <div>Addr</div>
+      <div>GSTIN/UIN : 29ABCDE1234F1Z5</div>
+      <div>State Name : 29, Karnataka</div>
+    </div>
+    <div class="col">
+      <div class="section-label">CONSIGNEE (SHIP TO)</div>
+      <div class="seller-name">M/S Buyer Co</div>
+      <div>Addr</div>
+      <table class="grid" style="margin-top:6px">
+        <tr>
+          <td class="grid-cell"><div class="label">Buyer&#39;s Order No.</div><div class="value"></div></td>
+          <td class="grid-cell"><div class="label">Dated</div><div class="value"></div></td>
+        </tr>
+        <tr>
+          <td class="grid-cell"><div class="label">Dispatch Doc No.</div><div class="value"></div></td>
+          <td class="grid-cell"><div class="label">Delivery Note Date</div><div class="value"></div></td>
+        </tr>
+        <tr>
+          <td class="grid-cell"><div class="label">Dispatched Through</div><div class="value"></div></td>
+          <td class="grid-cell"><div class="label">Destination</div><div class="value"></div></td>
+        </tr>
+        <tr>
+          <td colspan="2" class="grid-cell"><div class="label">Terms of Delivery</div><div class="value"></div></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="band">
+    <table class="items">
+      <thead>
+        <tr>
+          <th>Sl No.</th>
+          <th>Description of Goods</th>
+          <th>HSN/SAC</th>
+          <th>Quantity</th>
+          <th>Unit</th>
+          <th>Rate</th>
+          <th>Amount</th>
+          <th>GST Rate</th>
+          <th>IGST Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+        <td class="c">1</td>
+        <td>Paper</td>
+        <td class="c">4802</td>
+        <td class="r">1</td>
+        <td class="c">PKT</td>
+        <td class="r">299.00</td>
+        <td class="r">299.00</td>
+        <td class="c">12%</td><td class="r">35.88</td>
+      </tr>
+        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="after-items">
+    <div class="totals-wrap">
+      <div class="totals-left">Total Qty: 1</div>
+      <div class="totals-right">
+        <table>
+          <tr><td class="label-col">Subtotal</td><td class="r">299.00</td></tr>
+          <tr><td class="label-col">IGST</td><td class="r">35.88</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="grand">
+      <div class="g-label">Grand Total</div>
+      <div class="g-value">INR 334.88</div>
+    </div>
+    <div class="words"><strong>Amount in words :</strong> Indian Rupees Three Hundred Thirty Four and Eighty Eight Paise Only</div>
+    <div class="band">
+      <div class="section-label" style="padding:4px 8px 0">Tax Summary (HSN/SAC)</div>
+      <table class="hsn-table">
+        <thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th colspan="2">IGST (Rate · Amount)</th><th>Total Tax Amount</th></tr></thead>
+        <tbody>
+          <tr>
+          <td class="c">4802</td>
+          <td class="r">299.00</td>
+          <td class="c">12%</td>
+          <td class="r">35.88</td>
+          <td class="r">35.88</td>
+        </tr>
+          <tr class="bold"><td>Total</td><td class="r">299.00</td><td></td><td class="r">35.88</td><td class="r">35.88</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="bank-row">
+      <div class="bank-left">
+        <strong>Bank Details</strong>
+        <div>A/c Holder's Name : </div>
+        <div>Bank Name : </div>
+        <div>A/c No. : </div>
+        <div>Branch & IFSC : </div>
+      </div>
+      <div class="bank-right">
+        <div style="font-size:8pt">for</div>
+        <div class="seller-name">Mahavir</div>
+        <div class="signatory">Authorised Signatory</div>
+      </div>
+    </div>
+    <div class="declaration">
+      <strong>Declaration</strong>
+      <div>We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.</div>
+    </div>
+    <div class="footer">This is a Computer Generated Invoice</div>
+  </div>
+</div>
+</body>
+</html>"
+`;
