@@ -2,6 +2,8 @@ import { ScrollView, View, Text, TextInput, StyleSheet, Pressable } from 'react-
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useCallback, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '@/store/useAppStore';
 import { StatePicker } from '@/components/StatePicker';
 import { sellerGstinSchema, sellerStateSchema } from '@/lib/validation';
@@ -29,38 +31,57 @@ const sellerFormSchema = z.object({
 
 type FormValues = z.infer<typeof sellerFormSchema>;
 
+function formValuesFromStore(
+  seller: ReturnType<typeof useAppStore.getState>['seller'],
+  settings: ReturnType<typeof useAppStore.getState>['settings'],
+): FormValues {
+  return {
+    businessName: seller.businessName,
+    tradeName: seller.tradeName ?? '',
+    address: seller.address,
+    gstin: seller.gstin,
+    phone: seller.phone ?? '',
+    stateCode: seller.stateCode,
+    declaration: seller.declaration,
+    accountHolderName: seller.bank?.accountHolderName ?? '',
+    bankName: seller.bank?.bankName ?? '',
+    accountNumber: seller.bank?.accountNumber ?? '',
+    branchAndIfsc: seller.bank?.branchAndIfsc ?? '',
+    serialPrefix: settings.serialPrefix,
+    nextSerial: settings.nextSerial,
+    serialPadding: settings.serialPadding,
+    defaultUnit: settings.defaultUnit,
+    defaultGstRatePercent: settings.defaultGstRatePercent,
+    defaultPaymentTerms: settings.defaultPaymentTerms,
+  };
+}
+
 export default function SettingsScreen() {
   const seller = useAppStore((s) => s.seller);
   const settings = useAppStore((s) => s.settings);
   const updateSeller = useAppStore((s) => s.updateSeller);
   const updateSettings = useAppStore((s) => s.updateSettings);
 
+  const defaultValues = useMemo(
+    () => formValuesFromStore(seller, settings),
+    [seller, settings],
+  );
+
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(sellerFormSchema) as import('react-hook-form').Resolver<FormValues>,
-    values: {
-      businessName: seller.businessName,
-      tradeName: seller.tradeName ?? '',
-      address: seller.address,
-      gstin: seller.gstin,
-      phone: seller.phone ?? '',
-      stateCode: seller.stateCode,
-      declaration: seller.declaration,
-      accountHolderName: seller.bank?.accountHolderName ?? '',
-      bankName: seller.bank?.bankName ?? '',
-      accountNumber: seller.bank?.accountNumber ?? '',
-      branchAndIfsc: seller.bank?.branchAndIfsc ?? '',
-      serialPrefix: settings.serialPrefix,
-      nextSerial: settings.nextSerial,
-      serialPadding: settings.serialPadding,
-      defaultUnit: settings.defaultUnit,
-      defaultGstRatePercent: settings.defaultGstRatePercent,
-      defaultPaymentTerms: settings.defaultPaymentTerms,
-    },
+    defaultValues,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      reset(formValuesFromStore(seller, settings));
+    }, [seller, settings, reset]),
+  );
 
   const onSubmit = handleSubmit((data) => {
     updateSeller({
@@ -89,7 +110,7 @@ export default function SettingsScreen() {
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="always">
       <Section title="Seller profile">
         <Field label="Business name" error={errors.businessName?.message}>
           <Controller

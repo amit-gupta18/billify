@@ -65,12 +65,18 @@ function emptyItemRow(supplyType: Totals['supplyType']): string {
     .join('')}</tr>`;
 }
 
+export type RenderInvoiceOptions = {
+  /** Fit A4 width on phone/web preview; omit for PDF print HTML. */
+  screenPreview?: boolean;
+};
+
 export function renderInvoiceHtml(
   invoice: Invoice,
   seller: SellerProfile,
   settings: Settings,
   totals: Totals,
   copyLabel: CopyLabel = 'ORIGINAL FOR RECIPIENT',
+  options?: RenderInvoiceOptions,
 ): string {
   const paymentTerms =
     invoice.meta.paymentTerms?.trim() || settings.defaultPaymentTerms || '';
@@ -142,11 +148,24 @@ export function renderInvoiceHtml(
       : `<tr class="bold"><td>Total</td><td class="r">${formatMoney(totals.subtotal)}</td><td></td><td class="r">${formatMoney(totals.cgst)}</td><td></td><td class="r">${formatMoney(totals.sgst)}</td><td class="r">${formatMoney(totals.totalTax)}</td></tr>`;
 
   const bank = seller.bank;
+  const screenPreview = options?.screenPreview === true;
+  const previewHead = screenPreview
+    ? `<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"/>
+<style>
+@media screen {
+  html { background: #f1f5f9; }
+  body { margin: 0; padding: 0; overflow-x: hidden; }
+  .page-scaler { width: 100%; max-width: 210mm; margin: 0 auto; }
+  .outer { width: 100%; max-width: 210mm; margin: 0 auto; }
+}
+</style>`
+    : '';
 
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
+${previewHead}
 <style>
 @page { size: A4; margin: 10mm; }
 * { box-sizing: border-box; }
@@ -199,6 +218,7 @@ body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; margin: 0; col
 </style>
 </head>
 <body>
+${screenPreview ? '<div class="page-scaler">' : ''}
 <div class="outer">
   <div class="band title-bar">
     <div style="width:120px"></div>
@@ -323,6 +343,7 @@ body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; margin: 0; col
     <div class="footer">This is a Computer Generated Invoice</div>
   </div>
 </div>
+${screenPreview ? '</div>' : ''}
 </body>
 </html>`;
 }
