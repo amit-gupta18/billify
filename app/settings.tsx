@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { StatePicker } from '@/components/StatePicker';
 import { sellerGstinSchema, sellerStateSchema } from '@/lib/validation';
@@ -61,6 +62,7 @@ export default function SettingsScreen() {
   const settings = useAppStore((s) => s.settings);
   const updateSeller = useAppStore((s) => s.updateSeller);
   const updateSettings = useAppStore((s) => s.updateSettings);
+  const insets = useSafeAreaInsets();
 
   const defaultValues = useMemo(
     () => formValuesFromStore(seller, settings),
@@ -110,7 +112,10 @@ export default function SettingsScreen() {
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="always">
+    <ScrollView
+      contentContainerStyle={[styles.container, { paddingBottom: spacing.xl + insets.bottom }]}
+      keyboardShouldPersistTaps="always"
+    >
       <Section title="Seller profile">
         <Field label="Business name" error={errors.businessName?.message}>
           <Controller

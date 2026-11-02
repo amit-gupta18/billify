@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TextInput, StyleSheet, type TextInputProps } from 'react-native';
-import { formatMoney, parseMoney } from '@/lib/gst';
+import { parseMoney } from '@/lib/gst';
 import type { Money } from '@/types/invoice';
 import { colors, radii, spacing } from '@/theme/ui';
 
@@ -10,6 +10,7 @@ type Props = Omit<TextInputProps, 'value' | 'onChangeText'> & {
   error?: string;
 };
 
+/** Display rupees with 2 decimals when not editing (blur). */
 function paiseToField(paise: Money): string {
   if (!paise) return '';
   const sign = paise < 0 ? '-' : '';
@@ -19,11 +20,22 @@ function paiseToField(paise: Money): string {
   return `${sign}${rupees}.${frac}`;
 }
 
+/** Allow only partial money typing (max 2 decimal places). */
+function sanitizeTyping(raw: string): string | null {
+  const t = raw.replace(/[₹,\s]/g, '');
+  if (t === '' || t === '-' || t === '.') return t;
+  if (/^-?\d*\.?\d{0,2}$/.test(t)) return t;
+  return null;
+}
+
 export function MoneyInput({ valuePaise, onChangePaise, error, style, ...rest }: Props) {
   const [text, setText] = useState(() => paiseToField(valuePaise));
+  const focusedRef = useRef(false);
 
   useEffect(() => {
-    setText(paiseToField(valuePaise));
+    if (!focusedRef.current) {
+      setText(paiseToField(valuePaise));
+    }
   }, [valuePaise]);
 
   return (
@@ -31,23 +43,35 @@ export function MoneyInput({ valuePaise, onChangePaise, error, style, ...rest }:
       {...rest}
       style={[styles.input, error ? styles.inputError : null, style]}
       value={text}
-      onChangeText={(raw) => {
-        setText(raw);
-        const parsed = parseMoney(raw);
-        if (parsed !== null) onChangePaise(parsed);
-        else if (!raw.trim()) onChangePaise(0);
+      onFocus={(e) => {
+        focusedRef.current = true;
+        rest.onFocus?.(e);
       }}
-      onBlur={() => {
+      onChangeText={(raw) => {
+        const next = sanitizeTyping(raw);
+        if (next === null) return;
+        setText(next);
+        if (next === '' || next === '-' || next === '.') {
+          onChangePaise(0);
+          return;
+        }
+        const parsed = parseMoney(next);
+        if (parsed !== null) onChangePaise(parsed);
+      }}
+      onBlur={(e) => {
+        focusedRef.current = false;
         const parsed = parseMoney(text);
         if (parsed !== null) {
-          setText(paiseToField(parsed));
           onChangePaise(parsed);
+          setText(paiseToField(parsed));
+        } else {
+          setText(paiseToField(valuePaise));
         }
+        rest.onBlur?.(e);
       }}
       keyboardType="decimal-pad"
       placeholder="0.00"
       placeholderTextColor={colors.textMuted}
-      accessibilityLabel={rest.accessibilityLabel ?? `Amount ${formatMoney(valuePaise)}`}
     />
   );
 }

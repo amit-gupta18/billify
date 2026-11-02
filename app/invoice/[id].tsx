@@ -17,6 +17,7 @@ import {
   useTotals,
   isInvoiceNoDuplicate,
 } from '@/store/useAppStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineItemRow } from '@/components/LineItemRow';
 import { ItemEditorModal } from '@/components/ItemEditorModal';
 import { TotalsFooter } from '@/components/TotalsFooter';
@@ -39,6 +40,8 @@ export default function InvoiceEditorScreen() {
   const [serialError, setSerialError] = useState<string | null>(null);
 
   const readOnly = invoice?.status === 'final';
+
+  const insets = useSafeAreaInsets();
 
   const patchImmediate = useCallback(
     (p: Parameters<typeof updateInvoice>[1]) => {
@@ -75,7 +78,7 @@ export default function InvoiceEditorScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 120 + insets.bottom }]}
         keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
       >

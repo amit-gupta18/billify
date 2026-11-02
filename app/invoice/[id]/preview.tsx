@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { InvoiceHtmlPreview } from '@/components/InvoiceHtmlPreview';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,6 +27,7 @@ export default function InvoicePreviewScreen() {
   const invoices = useAppStore((s) => s.invoices);
   const finalise = useAppStore((s) => s.finalise);
   const [exporting, setExporting] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const defaultValues = useMemo(
     () => (invoice ? buildExportFormValues(invoice, seller) : undefined),
@@ -140,7 +142,7 @@ export default function InvoicePreviewScreen() {
   return (
     <View style={styles.flex}>
       <InvoiceHtmlPreview html={html} />
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(spacing.md, insets.bottom) }]}>
         <Pressable
           style={[styles.btn, styles.btnSecondary]}
           onPress={() => {

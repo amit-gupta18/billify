@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { View, FlatList, TextInput, Pressable, Text, StyleSheet, Alert } from 'react-native';
 import { router, useNavigation } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore, useInvoiceList } from '@/store/useAppStore';
 import { InvoiceRow } from '@/components/InvoiceRow';
 import { EmptyState } from '@/components/EmptyState';
@@ -16,6 +17,7 @@ export default function InvoiceListScreen() {
   const deleteInvoice = useAppStore((s) => s.deleteInvoice);
   const list = useInvoiceList();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     navigation.setOptions({
@@ -66,7 +68,9 @@ export default function InvoiceListScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={filtered.length === 0 ? styles.flex : styles.listPad}
+        contentContainerStyle={
+          filtered.length === 0 ? styles.flex : [styles.listPad, { paddingBottom: 96 + insets.bottom }]
+        }
         ListEmptyComponent={
           <EmptyState
             title={list.length === 0 ? 'No invoices yet' : 'No matches'}
@@ -116,7 +120,11 @@ export default function InvoiceListScreen() {
           />
         )}
       />
-      <Pressable style={styles.fab} onPress={onNew} accessibilityLabel="Create invoice">
+      <Pressable
+        style={[styles.fab, { bottom: spacing.lg + insets.bottom }]}
+        onPress={onNew}
+        accessibilityLabel="Create invoice"
+      >
         <Text style={styles.fabText}>+</Text>
       </Pressable>
       <SellerSetupModal visible={setupOpen} onDismiss={() => setSetupOpen(false)} />

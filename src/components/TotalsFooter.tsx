@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Totals } from '@/lib/gst';
 import { formatMoney } from '@/lib/gst';
 import { colors, spacing, typography, radii } from '@/theme/ui';
@@ -10,8 +11,9 @@ type Props = {
 };
 
 export function TotalsFooter({ totals, onPreview, previewDisabled }: Props) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { paddingBottom: Math.max(spacing.md, insets.bottom) }]}>
       <View style={styles.rows}>
         <Row label="Subtotal" value={formatMoney(totals.subtotal)} />
         {totals.supplyType === 'inter' ? (
