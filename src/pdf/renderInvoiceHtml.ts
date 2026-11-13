@@ -4,7 +4,7 @@ import {
   formatMoney,
   formatGstRate,
   formatQty,
-  lineTaxAmounts,
+  effectiveGstRate,
 } from '../lib/gst';
 import { amountInWords } from '../lib/amountInWords';
 import { textToHtml, escapeHtml } from '../lib/escapeHtml';
@@ -84,11 +84,12 @@ export function renderInvoiceHtml(
   const itemRows = invoice.items
     .map((item, idx) => {
       const amt = totals.lineAmounts[item.id] ?? 0;
-      const tax = lineTaxAmounts(amt, item.gstRatePercent, totals.supplyType);
+      const tax = totals.lineTaxes[item.id] ?? { igst: 0, cgst: 0, sgst: 0, lineTotal: amt };
+      const rate = effectiveGstRate(totals, item.gstRatePercent);
       const taxCells =
         totals.supplyType === 'inter'
-          ? `<td class="c">${formatGstRate(item.gstRatePercent)}</td><td class="r">${formatMoney(tax.igst)}</td>`
-          : `<td class="c">${formatGstRate(item.gstRatePercent / 2)}</td><td class="r">${formatMoney(tax.cgst)}</td><td class="c">${formatGstRate(item.gstRatePercent / 2)}</td><td class="r">${formatMoney(tax.sgst)}</td>`;
+          ? `<td class="c">${formatGstRate(rate)}</td><td class="r">${formatMoney(tax.igst)}</td>`
+          : `<td class="c">${formatGstRate(rate / 2)}</td><td class="r">${formatMoney(tax.cgst)}</td><td class="c">${formatGstRate(rate / 2)}</td><td class="r">${formatMoney(tax.sgst)}</td>`;
 
       return `<tr>
         <td class="c">${idx + 1}</td>
@@ -222,7 +223,7 @@ ${screenPreview ? '<div class="page-scaler">' : ''}
 <div class="outer">
   <div class="band title-bar">
     <div style="width:120px"></div>
-    <h1>TAX INVOICE</h1>
+    <h1>${totals.documentType === 'BILL_OF_SUPPLY' ? 'BILL OF SUPPLY' : 'TAX INVOICE'}</h1>
     <div class="copy">${escapeHtml(copyLabel)}</div>
   </div>
 
