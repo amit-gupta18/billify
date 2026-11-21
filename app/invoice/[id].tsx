@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import {
   useAppStore,
@@ -21,6 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineItemRow } from '@/components/LineItemRow';
 import { ItemEditorModal } from '@/components/ItemEditorModal';
 import { TotalsFooter } from '@/components/TotalsFooter';
+import { AddressFieldsEditor } from '@/components/AddressFieldsEditor';
+import { BillingFromCard } from '@/components/BillingFromCard';
 import type { LineItem } from '@/types/invoice';
 import { invoiceNoSchema } from '@/lib/validation';
 import { colors, spacing, typography } from '@/theme/ui';
@@ -114,6 +117,8 @@ export default function InvoiceEditorScreen() {
           </View>
         )}
 
+        <BillingFromCard />
+
         <Text style={styles.section}>Invoice info</Text>
         <Field label="Invoice No.">
           <TextInput
@@ -159,15 +164,11 @@ export default function InvoiceEditorScreen() {
             onChangeText={(name) => patch({ buyer: { ...invoice.buyer, name } })}
           />
         </Field>
-        <Field label="Address">
-          <TextInput
-            style={[styles.input, styles.multiline]}
-            editable={!readOnly}
-            multiline
-            value={invoice.buyer.address}
-            onChangeText={(address) => patch({ buyer: { ...invoice.buyer, address } })}
-          />
-        </Field>
+        <AddressFieldsEditor
+          value={invoice.buyer}
+          readOnly={readOnly}
+          onChange={(address) => patch({ buyer: { ...invoice.buyer, ...address } })}
+        />
         <Field label="GSTIN (optional)">
           <TextInput
             style={styles.input}
@@ -179,15 +180,47 @@ export default function InvoiceEditorScreen() {
             }
           />
         </Field>
-        <Field label="State code">
-          <TextInput
-            style={styles.input}
-            editable={!readOnly}
-            value={invoice.buyer.stateCode}
-            onChangeText={(stateCode) => patch({ buyer: { ...invoice.buyer, stateCode } })}
-            placeholder="01–38"
+
+        <Text style={styles.section}>Ship to (consignee)</Text>
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>Same as buyer</Text>
+          <Switch
+            disabled={readOnly}
+            value={!invoice.shipTo}
+            onValueChange={(same) =>
+              patch({
+                shipTo: same
+                  ? undefined
+                  : {
+                      name: invoice.buyer.name,
+                      address: invoice.buyer.address,
+                      addressLine1: invoice.buyer.addressLine1,
+                      addressLine2: invoice.buyer.addressLine2,
+                      city: invoice.buyer.city,
+                      pincode: invoice.buyer.pincode,
+                      stateCode: invoice.buyer.stateCode,
+                    },
+              })
+            }
           />
-        </Field>
+        </View>
+        {invoice.shipTo ? (
+          <>
+            <Field label="Name">
+              <TextInput
+                style={styles.input}
+                editable={!readOnly}
+                value={invoice.shipTo.name}
+                onChangeText={(name) => patch({ shipTo: { ...invoice.shipTo!, name } })}
+              />
+            </Field>
+            <AddressFieldsEditor
+              value={invoice.shipTo}
+              readOnly={readOnly}
+              onChange={(address) => patch({ shipTo: { ...invoice.shipTo!, ...address } })}
+            />
+          </>
+        ) : null}
 
         <Pressable onPress={() => setMetaOpen((o) => !o)}>
           <Text style={styles.section}>Order & dispatch {metaOpen ? '▾' : '▸'}</Text>
@@ -318,7 +351,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     fontSize: 16,
   },
-  multiline: { minHeight: 72, textAlignVertical: 'top' },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  switchLabel: typography.body,
   itemsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   link: { color: colors.primary, fontWeight: '600' },
   banner: { backgroundColor: '#FEF3C7', padding: spacing.sm + 4, borderRadius: 10 },

@@ -7,15 +7,18 @@ export interface BankDetails {
   branchAndIfsc: string;
 }
 
-export interface SellerProfile {
-  businessName: string;
-  tradeName?: string;
-  /** Single-string address (joined from the structured parts below; legacy data may only have this). */
-  address: string;
+/** Structured address; `address` on the owner is these parts joined (legacy data may only have `address`). */
+export interface AddressFields {
   addressLine1?: string;
   addressLine2?: string;
   city?: string;
   pincode?: string;
+}
+
+export interface SellerProfile extends AddressFields {
+  businessName: string;
+  tradeName?: string;
+  address: string;
   gstin: string;
   phone?: string;
   stateCode: string;
@@ -23,10 +26,17 @@ export interface SellerProfile {
   declaration: string;
 }
 
-export interface Buyer {
+export interface Buyer extends AddressFields {
   name: string;
   address: string;
   gstin?: string;
+  stateCode: string;
+}
+
+/** Consignee (ship to) when different from the buyer. */
+export interface ShipTo extends AddressFields {
+  name: string;
+  address: string;
   stateCode: string;
 }
 
@@ -61,6 +71,8 @@ export interface Invoice {
   invoiceNo: string;
   date: string;
   buyer: Buyer;
+  /** Undefined means ship to the buyer's address. */
+  shipTo?: ShipTo;
   meta: InvoiceMeta;
   items: LineItem[];
   status: InvoiceStatus;

@@ -174,6 +174,7 @@ export const useAppStore = create<AppState>()(
             [newId]: {
               ...dup,
               buyer: { ...source.buyer },
+              shipTo: source.shipTo ? { ...source.shipTo } : undefined,
               meta: {
                 ...source.meta,
                 paymentTerms: source.meta.paymentTerms ?? settings.defaultPaymentTerms,

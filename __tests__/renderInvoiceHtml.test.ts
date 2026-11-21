@@ -57,4 +57,29 @@ describe('renderInvoiceHtml', () => {
     expect(html.match(/GSTIN\/UIN :/g)).toHaveLength(1); // seller only; buyer GSTIN is empty
     expect(html).toContain('Invoice No.');
   });
+
+  it('prints structured buyer address and a separate ship-to party', () => {
+    const inv: Invoice = {
+      ...invoice,
+      buyer: {
+        ...invoice.buyer,
+        addressLine1: '22, Linking Road',
+        city: 'Bengaluru',
+        pincode: '560001',
+      },
+      shipTo: {
+        name: 'Sharma Godown',
+        address: '',
+        addressLine1: 'Plot 7, Peenya Industrial Area',
+        city: 'Bengaluru',
+        pincode: '560058',
+        stateCode: '29',
+      },
+    };
+    const html = renderInvoiceHtml(inv, seller, defaultSettings(), computeTotals(inv, seller));
+    // Buyer: state is on its own "State Name" row, so not repeated in the address.
+    expect(html).toContain('22, Linking Road<br>Bengaluru - 560001');
+    expect(html).toContain('M/S Sharma Godown');
+    expect(html).toContain('Plot 7, Peenya Industrial Area<br>Bengaluru, Karnataka - 560058');
+  });
 });

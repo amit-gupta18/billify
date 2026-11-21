@@ -1,24 +1,25 @@
-import type { SellerProfile } from '../types/invoice';
+import type { AddressFields } from '../types/invoice';
 import { stateName } from './states';
 
 /** Longest line we keep when re-flowing a legacy one-line address at commas. */
 const MAX_LEGACY_LINE = 40;
 
-type AddressParts = Partial<
-  Pick<SellerProfile, 'addressLine1' | 'addressLine2' | 'city' | 'pincode' | 'stateCode'>
->;
+type AddressParts = AddressFields & { stateCode?: string };
 
-function hasStructuredAddress(seller: AddressParts): boolean {
-  return [seller.addressLine1, seller.addressLine2, seller.city, seller.pincode].some(
-    (v) => !!v?.trim(),
-  );
+export type AddressLineOptions = {
+  /** Put the state name on the last line (default true). Off where a separate "State Name" row is printed. */
+  withState?: boolean;
+};
+
+export function hasStructuredAddress(parts: AddressFields): boolean {
+  return [parts.addressLine1, parts.addressLine2, parts.city, parts.pincode].some((v) => !!v?.trim());
 }
 
 /** "Mumbai, Maharashtra - 400069" (any missing part is dropped). */
-function cityStatePinLine(seller: AddressParts): string {
-  const state = seller.stateCode ? stateName(seller.stateCode) : '';
-  const place = [seller.city?.trim(), state].filter(Boolean).join(', ');
-  const pin = seller.pincode?.trim() ?? '';
+function cityStatePinLine(parts: AddressParts, withState: boolean): string {
+  const state = withState && parts.stateCode ? stateName(parts.stateCode) : '';
+  const place = [parts.city?.trim(), state].filter(Boolean).join(', ');
+  const pin = parts.pincode?.trim() ?? '';
   if (place && pin) return `${place} - ${pin}`;
   return place || pin;
 }
@@ -45,28 +46,53 @@ function reflowAtCommas(line: string): string[] {
   return lines;
 }
 
-/** Address formatted as separate lines for the invoice "billing from" block. */
-export function sellerAddressLines(seller: AddressParts & Pick<SellerProfile, 'address'>): string[] {
-  if (hasStructuredAddress(seller)) {
-    return [seller.addressLine1?.trim(), seller.addressLine2?.trim(), cityStatePinLine(seller)].filter(
+/** Address as separate printable lines (structured parts, or a legacy `address` string re-flowed). */
+export function addressLines(
+  party: AddressParts & { address?: string },
+  { withState = true }: AddressLineOptions = {},
+): string[] {
+  if (hasStructuredAddress(party)) {
+    return [party.addressLine1?.trim(), party.addressLine2?.trim(), cityStatePinLine(party, withState)].filter(
       (l): l is string => !!l,
     );
   }
-  return (seller.address ?? '')
+  return (party.address ?? '')
     .split(/\r\n|\r|\n/)
     .map((l) => l.trim())
     .filter(Boolean)
     .flatMap(reflowAtCommas);
 }
 
-/** Single-string address stored in `SellerProfile.address`, built from the structured parts. */
-export function joinSellerAddress(seller: AddressParts): string {
-  return [seller.addressLine1?.trim(), seller.addressLine2?.trim(), cityStatePinLine(seller)]
+/** Single-string address stored in the owner's `address`, built from the structured parts. */
+export function joinAddress(parts: AddressParts): string {
+  return [parts.addressLine1?.trim(), parts.addressLine2?.trim(), cityStatePinLine(parts, true)]
     .filter(Boolean)
     .join(', ');
 }
 
-/** First line only — guards against an address pasted into the business-name field. */
+/**
+ * Structured parts to show in an editor. A legacy one-line address is split so the user can tidy it:
+ * first line into line 1, the rest into line 2.
+ */
+export function editableAddressParts(party: AddressFields & { address?: string }): Required<AddressFields> {
+  if (hasStructuredAddress(party)) {
+    return {
+      addressLine1: party.addressLine1 ?? '',
+      addressLine2: party.addressLine2 ?? '',
+      city: party.city ?? '',
+      pincode: party.pincode ?? '',
+    };
+  }
+  const legacy = addressLines({ address: party.address });
+  return {
+    addressLine1: (legacy[0] ?? '').replace(/,$/, ''),
+    addressLine2: legacy.slice(1).join(' ').replace(/,$/, ''),
+    city: '',
+    pincode: '',
+  };
+}
+
+/** First line only — guards against an address pasted into a name field. */
 export function singleLineName(name: string): string {
   return (name.split(/\r\n|\r|\n/)[0] ?? '').trim();
 }

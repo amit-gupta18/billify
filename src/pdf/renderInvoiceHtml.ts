@@ -1,4 +1,4 @@
-import type { Invoice, SellerProfile, Settings } from '../types/invoice';
+import type { Buyer, Invoice, SellerProfile, Settings, ShipTo } from '../types/invoice';
 import type { Totals } from '../lib/gst';
 import {
   formatMoney,
@@ -9,7 +9,7 @@ import {
 import { amountInWords } from '../lib/amountInWords';
 import { textToHtml, escapeHtml } from '../lib/escapeHtml';
 import { stateName } from '../lib/states';
-import { sellerAddressLines, singleLineName } from '../lib/address';
+import { addressLines, singleLineName, type AddressLineOptions } from '../lib/address';
 
 export type CopyLabel =
   | 'ORIGINAL FOR RECIPIENT'
@@ -53,11 +53,13 @@ function gridTable(cells: [label: string, value: string | undefined][], style?: 
   return `<table class="grid"${style ? ` style="${style}"` : ''}>${rows.join('')}</table>`;
 }
 
-/** Name (with M/S), multi-line address — each omitted when empty. */
-function partyHeader(name: string | undefined, address: string | undefined): string {
+/** Name (with M/S) and address lines — each omitted when empty. */
+function partyHeader(party: Buyer | ShipTo, options?: AddressLineOptions): string {
+  const name = singleLineName(party.name ?? '');
+  const lines = addressLines(party, options);
   return [
-    name?.trim() ? `<div class="seller-name">M/S ${textToHtml(name.trim())}</div>` : '',
-    address?.trim() ? `<div>${textToHtml(address.trim())}</div>` : '',
+    name ? `<div class="seller-name">M/S ${escapeHtml(name)}</div>` : '',
+    lines.length ? `<div>${lines.map(escapeHtml).join('<br>')}</div>` : '',
   ].join('');
 }
 
@@ -182,7 +184,8 @@ export function renderInvoiceHtml(
 
   const bank = seller.bank;
   const sellerName = singleLineName(seller.businessName || '');
-  const sellerAddress = sellerAddressLines(seller);
+  const sellerAddress = addressLines(seller);
+  const shipTo = invoice.shipTo ?? invoice.buyer;
   const bankLines = [
     labelledLine("A/c Holder's Name", bank?.accountHolderName),
     labelledLine('Bank Name', bank?.bankName),
@@ -295,13 +298,13 @@ ${screenPreview ? '<div class="page-scaler">' : ''}
   <div class="band row2">
     <div class="col">
       <div class="section-label">BUYER (BILL TO)</div>
-      ${partyHeader(invoice.buyer.name, invoice.buyer.address)}
+      ${partyHeader(invoice.buyer, { withState: false })}
       ${labelledLine('GSTIN/UIN', invoice.buyer.gstin)}
       ${labelledLine('State Name', invoice.buyer.stateCode ? `${invoice.buyer.stateCode}, ${stateName(invoice.buyer.stateCode)}` : '')}
     </div>
     <div class="col">
       <div class="section-label">CONSIGNEE (SHIP TO)</div>
-      ${partyHeader(invoice.buyer.name, invoice.buyer.address)}
+      ${partyHeader(shipTo)}
       ${gridTable(
         [
           ["Buyer's Order No.", invoice.meta.buyersOrderNo],

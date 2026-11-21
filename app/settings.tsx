@@ -3,13 +3,13 @@ import { useForm, useWatch, Controller, type Control, type FieldErrors } from 'r
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useCallback, useMemo } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { StatePicker } from '@/components/StatePicker';
 import { invoiceNoSchema, sellerGstinSchema, sellerStateSchema } from '@/lib/validation';
 import { formatSerial } from '@/lib/serial';
-import { joinSellerAddress, sellerAddressLines, singleLineName } from '@/lib/address';
+import { editableAddressParts, joinAddress, singleLineName } from '@/lib/address';
 import { colors, radii, spacing, typography } from '@/theme/ui';
 
 const wholeNumber = (min: number, max?: number) => {
@@ -69,22 +69,12 @@ function formValuesFromStore(
   seller: ReturnType<typeof useAppStore.getState>['seller'],
   settings: ReturnType<typeof useAppStore.getState>['settings'],
 ): FormValues {
-  const hasStructured = [seller.addressLine1, seller.addressLine2, seller.city, seller.pincode].some(
-    (v) => !!v?.trim(),
-  );
-  // Legacy profiles only have a one-line `address`: split it so the user can tidy it into fields.
-  const legacyLines = hasStructured ? [] : sellerAddressLines({ address: seller.address });
   return {
     businessName: singleLineName(seller.businessName),
     tradeName: seller.tradeName ?? '',
     phone: seller.phone ?? '',
     gstin: seller.gstin,
-    addressLine1: hasStructured ? (seller.addressLine1 ?? '') : (legacyLines[0] ?? '').replace(/,$/, ''),
-    addressLine2: hasStructured
-      ? (seller.addressLine2 ?? '')
-      : legacyLines.slice(1).join(' ').replace(/,$/, ''),
-    city: seller.city ?? '',
-    pincode: seller.pincode ?? '',
+    ...editableAddressParts(seller),
     stateCode: seller.stateCode,
     declaration: seller.declaration,
     accountHolderName: seller.bank?.accountHolderName ?? '',
@@ -150,7 +140,7 @@ export default function SettingsScreen() {
         businessName: singleLineName(data.businessName),
         tradeName: data.tradeName?.trim(),
         ...addressParts,
-        address: joinSellerAddress(addressParts),
+        address: joinAddress(addressParts),
         gstin: data.gstin.trim().toUpperCase(),
         phone: data.phone?.trim(),
         declaration: data.declaration.trim(),

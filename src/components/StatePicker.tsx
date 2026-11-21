@@ -48,6 +48,7 @@ export function StatePicker({ value, onChange, label = 'State', error }: Props) 
           />
           <FlatList
             data={filtered}
+            keyboardShouldPersistTaps="handled"
             keyExtractor={(item) => item.code}
             renderItem={({ item }) => (
               <Pressable
