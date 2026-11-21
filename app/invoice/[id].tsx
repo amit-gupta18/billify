@@ -1,5 +1,5 @@
 import { useLocalSearchParams, router } from 'expo-router';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import {
   ScrollView,
   View,
@@ -22,6 +22,7 @@ import { LineItemRow } from '@/components/LineItemRow';
 import { ItemEditorModal } from '@/components/ItemEditorModal';
 import { TotalsFooter } from '@/components/TotalsFooter';
 import type { LineItem } from '@/types/invoice';
+import { invoiceNoSchema } from '@/lib/validation';
 import { colors, spacing, typography } from '@/theme/ui';
 
 export default function InvoiceEditorScreen() {
@@ -53,14 +54,39 @@ export default function InvoiceEditorScreen() {
 
   const patch = patchImmediate;
 
-  const onSerialChange = (invoiceNo: string) => {
+  // The box may be cleared or hold an invalid number while typing; the store only ever gets a valid one.
+  // While it is invalid, the store keeps the number the invoice had when editing started.
+  const [serialDraft, setSerialDraft] = useState<string | null>(null);
+  const serialOriginal = useRef<string | null>(null);
+
+  const onSerialFocus = () => {
+    serialOriginal.current = invoice?.invoiceNo ?? null;
+  };
+
+  const onSerialChange = (text: string) => {
     if (!id) return;
-    if (isInvoiceNoDuplicate(invoiceNo, id)) {
-      setSerialError('Invoice number already used');
+    setSerialDraft(text);
+    const invoiceNo = text.trim();
+    const parsed = invoiceNoSchema.safeParse(invoiceNo);
+    const error = !parsed.success
+      ? (parsed.error.issues[0]?.message ?? 'Invalid invoice number')
+      : isInvoiceNoDuplicate(invoiceNo, id)
+        ? 'Invoice number already used'
+        : null;
+    setSerialError(error);
+    if (error) {
+      const original = serialOriginal.current;
+      if (original && invoice?.invoiceNo !== original) patchImmediate({ invoiceNo: original });
       return;
     }
-    setSerialError(null);
     patchImmediate({ invoiceNo });
+  };
+
+  const onSerialBlur = () => {
+    // Leaving the box empty/invalid shows the saved (original) number again.
+    setSerialDraft(null);
+    setSerialError(null);
+    serialOriginal.current = null;
   };
 
   if (!invoice) {
@@ -93,10 +119,18 @@ export default function InvoiceEditorScreen() {
           <TextInput
             style={styles.input}
             editable={!readOnly}
-            value={invoice.invoiceNo}
+            value={serialDraft ?? invoice.invoiceNo}
             onChangeText={onSerialChange}
+            onFocus={onSerialFocus}
+            onBlur={onSerialBlur}
+            autoCapitalize="characters"
+            autoCorrect={false}
           />
-          {serialError ? <Text style={styles.error}>{serialError}</Text> : null}
+          {serialError ? (
+            <Text style={styles.error}>
+              {serialError} — {invoice.invoiceNo} will be kept unless fixed
+            </Text>
+          ) : null}
         </Field>
         <Field label="Dated">
           <TextInput

@@ -20,6 +20,10 @@ body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; margin: 0; col
 .col { flex: 1; padding: 6px 8px; border-right: 1px solid #000; }
 .col:last-child { border-right: none; }
 .seller-name { font-weight: bold; text-transform: uppercase; }
+.seller-block { line-height: 1.4; }
+.seller-title { font-size: 11pt; margin-bottom: 2px; }
+.seller-address { margin: 2px 0 4px; }
+.seller-contact { font-size: 8.5pt; }
 .label { color: #666; font-size: 7pt; }
 .value { font-weight: bold; font-size: 8pt; }
 .grid { width: 100%; border-collapse: collapse; }
@@ -67,61 +71,30 @@ body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; margin: 0; col
   </div>
 
   <div class="band row2">
-    <div class="col">
-      <div class="seller-name">M/S Mahavir</div>
+    <div class="col seller-block">
+      <div class="section-label">BILLING FROM</div>
+      <div class="seller-name seller-title">M/S Mahavir</div>
       
-      <div>Seller addr</div>
-      <div>GSTIN/UIN : 09ABCDE1234F1Z5</div>
-      <div>Phone : </div>
-      <div>State Name : 09, Uttar Pradesh</div>
+      <div class="seller-address">Seller addr</div>
+      
+      <div class="seller-contact">GSTIN/UIN : 09ABCDE1234F1Z5</div>
     </div>
     <div class="col">
-      <table class="grid">
-        <tr>
-          <td class="grid-cell"><div class="label">Invoice No.</div><div class="value">ME260067</div></td>
-          <td class="grid-cell"><div class="label">Dated</div><div class="value">2026-01-15</div></td>
-        </tr>
-        <tr>
-          <td class="grid-cell"><div class="label">Delivery Note</div><div class="value"></div></td>
-          <td class="grid-cell"><div class="label">Mode / Terms of Payment</div><div class="value">CASH</div></td>
-        </tr>
-        <tr>
-          <td class="grid-cell"><div class="label">Reference No. &amp; Date</div><div class="value"></div></td>
-          <td class="grid-cell"><div class="label">Other References</div><div class="value"></div></td>
-        </tr>
-      </table>
+      <table class="grid"><tr><td class="grid-cell"><div class="label">Invoice No.</div><div class="value">ME260067</div></td><td class="grid-cell"><div class="label">Dated</div><div class="value">2026-01-15</div></td></tr><tr><td colspan="2" class="grid-cell"><div class="label">Mode / Terms of Payment</div><div class="value">CASH</div></td></tr></table>
     </div>
   </div>
 
   <div class="band row2">
     <div class="col">
       <div class="section-label">BUYER (BILL TO)</div>
-      <div class="seller-name">M/S Buyer Co</div>
-      <div>Addr</div>
+      <div class="seller-name">M/S Buyer Co</div><div>Addr</div>
       <div>GSTIN/UIN : 29ABCDE1234F1Z5</div>
       <div>State Name : 29, Karnataka</div>
     </div>
     <div class="col">
       <div class="section-label">CONSIGNEE (SHIP TO)</div>
-      <div class="seller-name">M/S Buyer Co</div>
-      <div>Addr</div>
-      <table class="grid" style="margin-top:6px">
-        <tr>
-          <td class="grid-cell"><div class="label">Buyer&#39;s Order No.</div><div class="value"></div></td>
-          <td class="grid-cell"><div class="label">Dated</div><div class="value"></div></td>
-        </tr>
-        <tr>
-          <td class="grid-cell"><div class="label">Dispatch Doc No.</div><div class="value"></div></td>
-          <td class="grid-cell"><div class="label">Delivery Note Date</div><div class="value"></div></td>
-        </tr>
-        <tr>
-          <td class="grid-cell"><div class="label">Dispatched Through</div><div class="value"></div></td>
-          <td class="grid-cell"><div class="label">Destination</div><div class="value"></div></td>
-        </tr>
-        <tr>
-          <td colspan="2" class="grid-cell"><div class="label">Terms of Delivery</div><div class="value"></div></td>
-        </tr>
-      </table>
+      <div class="seller-name">M/S Buyer Co</div><div>Addr</div>
+      
     </div>
   </div>
 
@@ -189,11 +162,7 @@ body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; margin: 0; col
     </div>
     <div class="bank-row">
       <div class="bank-left">
-        <strong>Bank Details</strong>
-        <div>A/c Holder's Name : </div>
-        <div>Bank Name : </div>
-        <div>A/c No. : </div>
-        <div>Branch & IFSC : </div>
+        
       </div>
       <div class="bank-right">
         <div style="font-size:8pt">for</div>

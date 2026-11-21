@@ -15,6 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { lineItemSchema } from '@/lib/validation';
 import type { LineItem } from '@/types/invoice';
 import { z } from 'zod';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { MoneyInput } from '@/components/MoneyInput';
 import { colors, radii, spacing, typography } from '@/theme/ui';
 
@@ -74,6 +75,8 @@ export function ItemEditorModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaProvider>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -87,7 +90,7 @@ export function ItemEditorModal({
             <Text style={styles.save}>Save</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
           <Field label="Description" error={errors.description?.message}>
             <Controller
               control={control}
@@ -182,6 +185,8 @@ export function ItemEditorModal({
           </Field>
         </ScrollView>
       </KeyboardAvoidingView>
+      </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -206,6 +211,7 @@ function Field({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  safe: { flex: 1, backgroundColor: colors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -219,7 +225,8 @@ const styles = StyleSheet.create({
   title: typography.subtitle,
   cancel: { color: colors.textMuted, fontSize: 16 },
   save: { color: colors.primary, fontSize: 16, fontWeight: '700' },
-  form: { padding: spacing.md, gap: spacing.md, backgroundColor: colors.bg },
+  scroll: { flex: 1, backgroundColor: colors.bg },
+  form: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xl },
   field: { gap: 4 },
   input: {
     backgroundColor: colors.surface,

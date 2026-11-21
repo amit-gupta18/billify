@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Modal, View, Text, FlatList, Pressable, StyleSheet, TextInput } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GST_STATES } from '@/lib/states';
 import { colors, radii, spacing, typography } from '@/theme/ui';
 
@@ -30,7 +31,8 @@ export function StatePicker({ value, onChange, label = 'State', error }: Props) 
       </Pressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setOpen(false)}>
-        <View style={styles.modal}>
+        <SafeAreaProvider>
+        <SafeAreaView style={styles.modal} edges={['top', 'bottom', 'left', 'right']}>
           <View style={styles.modalHeader}>
             <Text style={typography.subtitle}>Select state</Text>
             <Pressable onPress={() => setOpen(false)}>
@@ -61,7 +63,8 @@ export function StatePicker({ value, onChange, label = 'State', error }: Props) 
               </Pressable>
             )}
           />
-        </View>
+        </SafeAreaView>
+        </SafeAreaProvider>
       </Modal>
     </>
   );

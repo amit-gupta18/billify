@@ -44,4 +44,17 @@ describe('renderInvoiceHtml', () => {
     expect(html).toContain('Indian Rupees Three Hundred Thirty Four and Eighty Eight Paise Only');
     expect(html).toContain('IGST');
   });
+
+  it('omits rows whose value is empty instead of printing an empty label', () => {
+    const sparse: Invoice = { ...invoice, buyer: { ...invoice.buyer, gstin: '' }, meta: {} };
+    const bare = { ...seller, phone: '', bank: undefined };
+    const html = renderInvoiceHtml(sparse, bare, defaultSettings(), computeTotals(sparse, bare));
+    expect(html).not.toContain('Phone :');
+    expect(html).not.toContain('State Code');
+    expect(html).not.toContain('Bank Details');
+    expect(html).not.toContain('Delivery Note');
+    expect(html).not.toContain("Buyer's Order No.");
+    expect(html.match(/GSTIN\/UIN :/g)).toHaveLength(1); // seller only; buyer GSTIN is empty
+    expect(html).toContain('Invoice No.');
+  });
 });

@@ -9,6 +9,7 @@ import {
 import { amountInWords } from '../lib/amountInWords';
 import { textToHtml, escapeHtml } from '../lib/escapeHtml';
 import { stateName } from '../lib/states';
+import { sellerAddressLines, singleLineName } from '../lib/address';
 
 export type CopyLabel =
   | 'ORIGINAL FOR RECIPIENT'
@@ -27,6 +28,37 @@ function gridCellSpan2(label: string, value: string): string {
 
 function formatDate(iso?: string): string {
   return iso ?? '';
+}
+
+/** `<div>Label : value</div>`, or nothing at all when the value is empty. */
+function labelledLine(label: string, value: string | undefined, className?: string): string {
+  const v = value?.trim();
+  if (!v) return '';
+  return `<div${className ? ` class="${className}"` : ''}>${escapeHtml(label)} : ${escapeHtml(v)}</div>`;
+}
+
+/** Two-column grid of only the filled cells; an odd last cell spans both columns. */
+function gridTable(cells: [label: string, value: string | undefined][], style?: string): string {
+  const filled = cells.filter(([, v]) => v?.trim()) as [string, string][];
+  if (filled.length === 0) return '';
+  const rows: string[] = [];
+  for (let i = 0; i < filled.length; i += 2) {
+    const [a, b] = [filled[i], filled[i + 1]];
+    rows.push(
+      b
+        ? `<tr>${gridCell(a[0], a[1].trim())}${gridCell(b[0], b[1].trim())}</tr>`
+        : `<tr>${gridCellSpan2(a[0], a[1].trim())}</tr>`,
+    );
+  }
+  return `<table class="grid"${style ? ` style="${style}"` : ''}>${rows.join('')}</table>`;
+}
+
+/** Name (with M/S), multi-line address — each omitted when empty. */
+function partyHeader(name: string | undefined, address: string | undefined): string {
+  return [
+    name?.trim() ? `<div class="seller-name">M/S ${textToHtml(name.trim())}</div>` : '',
+    address?.trim() ? `<div>${textToHtml(address.trim())}</div>` : '',
+  ].join('');
 }
 
 function itemTableHead(supplyType: Totals['supplyType']): string {
@@ -149,6 +181,14 @@ export function renderInvoiceHtml(
       : `<tr class="bold"><td>Total</td><td class="r">${formatMoney(totals.subtotal)}</td><td></td><td class="r">${formatMoney(totals.cgst)}</td><td></td><td class="r">${formatMoney(totals.sgst)}</td><td class="r">${formatMoney(totals.totalTax)}</td></tr>`;
 
   const bank = seller.bank;
+  const sellerName = singleLineName(seller.businessName || '');
+  const sellerAddress = sellerAddressLines(seller);
+  const bankLines = [
+    labelledLine("A/c Holder's Name", bank?.accountHolderName),
+    labelledLine('Bank Name', bank?.bankName),
+    labelledLine('A/c No.', bank?.accountNumber),
+    labelledLine('Branch & IFSC', bank?.branchAndIfsc),
+  ].join('');
   const screenPreview = options?.screenPreview === true;
   const previewHead = screenPreview
     ? `<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"/>
@@ -181,6 +221,10 @@ body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; margin: 0; col
 .col { flex: 1; padding: 6px 8px; border-right: 1px solid #000; }
 .col:last-child { border-right: none; }
 .seller-name { font-weight: bold; text-transform: uppercase; }
+.seller-block { line-height: 1.4; }
+.seller-title { font-size: 11pt; margin-bottom: 2px; }
+.seller-address { margin: 2px 0 4px; }
+.seller-contact { font-size: 8.5pt; }
 .label { color: #666; font-size: 7pt; }
 .value { font-weight: bold; font-size: 8pt; }
 .grid { width: 100%; border-collapse: collapse; }
@@ -228,61 +272,48 @@ ${screenPreview ? '<div class="page-scaler">' : ''}
   </div>
 
   <div class="band row2">
-    <div class="col">
-      <div class="seller-name">M/S ${textToHtml(seller.businessName || '')}</div>
-      ${seller.tradeName ? `<div>${textToHtml(seller.tradeName)}</div>` : ''}
-      <div>${textToHtml(seller.address || '')}</div>
-      <div>GSTIN/UIN : ${escapeHtml(seller.gstin || '')}</div>
-      <div>Phone : ${escapeHtml(seller.phone || '')}</div>
-      <div>State Name : ${escapeHtml(seller.stateCode ? `${seller.stateCode}, ${stateName(seller.stateCode)}` : '')}</div>
+    <div class="col seller-block">
+      <div class="section-label">BILLING FROM</div>
+      ${sellerName ? `<div class="seller-name seller-title">M/S ${escapeHtml(sellerName)}</div>` : ''}
+      ${seller.tradeName?.trim() ? `<div>${escapeHtml(singleLineName(seller.tradeName))}</div>` : ''}
+      ${sellerAddress.length ? `<div class="seller-address">${sellerAddress.map(escapeHtml).join('<br>')}</div>` : ''}
+      ${labelledLine('Phone', seller.phone, 'seller-contact')}
+      ${labelledLine('GSTIN/UIN', seller.gstin, 'seller-contact')}
     </div>
     <div class="col">
-      <table class="grid">
-        <tr>
-          ${gridCell('Invoice No.', invoice.invoiceNo)}
-          ${gridCell('Dated', invoice.date)}
-        </tr>
-        <tr>
-          ${gridCell('Delivery Note', invoice.meta.deliveryNote ?? '')}
-          ${gridCell('Mode / Terms of Payment', paymentTerms)}
-        </tr>
-        <tr>
-          ${gridCell('Reference No. & Date', invoice.meta.referenceNoAndDate ?? '')}
-          ${gridCell('Other References', invoice.meta.otherReferences ?? '')}
-        </tr>
-      </table>
+      ${gridTable([
+        ['Invoice No.', invoice.invoiceNo],
+        ['Dated', invoice.date],
+        ['Delivery Note', invoice.meta.deliveryNote],
+        ['Mode / Terms of Payment', paymentTerms],
+        ['Reference No. & Date', invoice.meta.referenceNoAndDate],
+        ['Other References', invoice.meta.otherReferences],
+      ])}
     </div>
   </div>
 
   <div class="band row2">
     <div class="col">
       <div class="section-label">BUYER (BILL TO)</div>
-      <div class="seller-name">M/S ${textToHtml(invoice.buyer.name || '')}</div>
-      <div>${textToHtml(invoice.buyer.address || '')}</div>
-      <div>GSTIN/UIN : ${escapeHtml(invoice.buyer.gstin ?? '')}</div>
-      <div>State Name : ${escapeHtml(invoice.buyer.stateCode ? `${invoice.buyer.stateCode}, ${stateName(invoice.buyer.stateCode)}` : '')}</div>
+      ${partyHeader(invoice.buyer.name, invoice.buyer.address)}
+      ${labelledLine('GSTIN/UIN', invoice.buyer.gstin)}
+      ${labelledLine('State Name', invoice.buyer.stateCode ? `${invoice.buyer.stateCode}, ${stateName(invoice.buyer.stateCode)}` : '')}
     </div>
     <div class="col">
       <div class="section-label">CONSIGNEE (SHIP TO)</div>
-      <div class="seller-name">M/S ${textToHtml(invoice.buyer.name || '')}</div>
-      <div>${textToHtml(invoice.buyer.address || '')}</div>
-      <table class="grid" style="margin-top:6px">
-        <tr>
-          ${gridCell("Buyer's Order No.", invoice.meta.buyersOrderNo ?? '')}
-          ${gridCell('Dated', formatDate(invoice.meta.buyersOrderDate))}
-        </tr>
-        <tr>
-          ${gridCell('Dispatch Doc No.', invoice.meta.dispatchDocNo ?? '')}
-          ${gridCell('Delivery Note Date', formatDate(invoice.meta.deliveryNoteDate))}
-        </tr>
-        <tr>
-          ${gridCell('Dispatched Through', invoice.meta.dispatchedThrough ?? '')}
-          ${gridCell('Destination', invoice.meta.destination ?? '')}
-        </tr>
-        <tr>
-          ${gridCellSpan2('Terms of Delivery', invoice.meta.termsOfDelivery ?? '')}
-        </tr>
-      </table>
+      ${partyHeader(invoice.buyer.name, invoice.buyer.address)}
+      ${gridTable(
+        [
+          ["Buyer's Order No.", invoice.meta.buyersOrderNo],
+          ['Dated', formatDate(invoice.meta.buyersOrderDate)],
+          ['Dispatch Doc No.', invoice.meta.dispatchDocNo],
+          ['Delivery Note Date', formatDate(invoice.meta.deliveryNoteDate)],
+          ['Dispatched Through', invoice.meta.dispatchedThrough],
+          ['Destination', invoice.meta.destination],
+          ['Terms of Delivery', invoice.meta.termsOfDelivery],
+        ],
+        'margin-top:6px',
+      )}
     </div>
   </div>
 
@@ -325,22 +356,18 @@ ${screenPreview ? '<div class="page-scaler">' : ''}
     </div>
     <div class="bank-row">
       <div class="bank-left">
-        <strong>Bank Details</strong>
-        <div>A/c Holder's Name : ${escapeHtml(bank?.accountHolderName ?? '')}</div>
-        <div>Bank Name : ${escapeHtml(bank?.bankName ?? '')}</div>
-        <div>A/c No. : ${escapeHtml(bank?.accountNumber ?? '')}</div>
-        <div>Branch & IFSC : ${escapeHtml(bank?.branchAndIfsc ?? '')}</div>
+        ${bankLines ? `<strong>Bank Details</strong>${bankLines}` : ''}
       </div>
       <div class="bank-right">
-        <div style="font-size:8pt">for</div>
-        <div class="seller-name">${textToHtml(seller.businessName || '')}</div>
+        ${sellerName ? `<div style="font-size:8pt">for</div>
+        <div class="seller-name">${escapeHtml(sellerName)}</div>` : ''}
         <div class="signatory">Authorised Signatory</div>
       </div>
     </div>
-    <div class="declaration">
+    ${seller.declaration?.trim() ? `<div class="declaration">
       <strong>Declaration</strong>
-      <div>${textToHtml(seller.declaration || '')}</div>
-    </div>
+      <div>${textToHtml(seller.declaration.trim())}</div>
+    </div>` : ''}
     <div class="footer">This is a Computer Generated Invoice</div>
   </div>
 </div>

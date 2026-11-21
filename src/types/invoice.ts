@@ -10,7 +10,12 @@ export interface BankDetails {
 export interface SellerProfile {
   businessName: string;
   tradeName?: string;
+  /** Single-string address (joined from the structured parts below; legacy data may only have this). */
   address: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  pincode?: string;
   gstin: string;
   phone?: string;
   stateCode: string;

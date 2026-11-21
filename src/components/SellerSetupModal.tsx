@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { StatePicker } from '@/components/StatePicker';
 import { colors, radii, spacing, typography } from '@/theme/ui';
@@ -44,7 +45,8 @@ export function SellerSetupModal({ visible, onDismiss }: Props) {
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={handleSkip}>
-      <View style={styles.backdrop}>
+      <SafeAreaProvider>
+      <SafeAreaView style={styles.backdrop} edges={['top', 'bottom', 'left', 'right']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.card}>
             <Text style={styles.title}>Welcome</Text>
@@ -77,7 +79,8 @@ export function SellerSetupModal({ visible, onDismiss }: Props) {
             </Pressable>
           </View>
         </KeyboardAvoidingView>
-      </View>
+      </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }

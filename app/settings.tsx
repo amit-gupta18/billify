@@ -1,5 +1,5 @@
-import { ScrollView, View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { ScrollView, View, Text, TextInput, StyleSheet, Pressable, Alert, type TextInputProps } from 'react-native';
+import { useForm, useWatch, Controller, type Control, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useCallback, useMemo } from 'react';
@@ -7,41 +7,84 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { StatePicker } from '@/components/StatePicker';
-import { sellerGstinSchema, sellerStateSchema } from '@/lib/validation';
+import { invoiceNoSchema, sellerGstinSchema, sellerStateSchema } from '@/lib/validation';
+import { formatSerial } from '@/lib/serial';
+import { joinSellerAddress, sellerAddressLines, singleLineName } from '@/lib/address';
 import { colors, radii, spacing, typography } from '@/theme/ui';
 
-const sellerFormSchema = z.object({
-  businessName: z.string().min(1, 'Business name is required').max(120),
-  tradeName: z.string().max(120).optional(),
-  address: z.string().min(1, 'Address is required').max(500),
-  gstin: sellerGstinSchema,
-  phone: z.string().max(20).optional(),
-  stateCode: sellerStateSchema,
-  declaration: z.string().min(1).max(1000),
-  accountHolderName: z.string().max(120).optional(),
-  bankName: z.string().max(120).optional(),
-  accountNumber: z.string().max(40).optional(),
-  branchAndIfsc: z.string().max(120).optional(),
-  serialPrefix: z.string().min(1).max(12),
-  nextSerial: z.number().int().min(1),
-  serialPadding: z.number().int().min(1).max(8),
-  defaultUnit: z.string().min(1).max(8),
-  defaultGstRatePercent: z.number().min(0).max(28),
-  defaultPaymentTerms: z.string().min(1).max(80),
-});
+const wholeNumber = (min: number, max?: number) => {
+  const base = z.number({ error: 'Enter a number' }).int('Enter a whole number').min(min, `Must be at least ${min}`);
+  return max === undefined ? base : base.max(max, `Must be at most ${max}`);
+};
+
+const sellerFormSchema = z
+  .object({
+    businessName: z.string().trim().min(1, 'Company name is required').max(120),
+    tradeName: z.string().max(120).optional(),
+    phone: z.string().max(20).optional(),
+    gstin: sellerGstinSchema,
+    addressLine1: z.string().trim().min(1, 'Address line 1 is required').max(120),
+    addressLine2: z.string().max(120).optional(),
+    city: z.string().trim().min(1, 'City is required').max(60),
+    pincode: z
+      .string()
+      .refine((v) => v.trim() === '' || /^\d{6}$/.test(v.trim()), 'PIN code must be 6 digits')
+      .optional(),
+    stateCode: sellerStateSchema,
+    declaration: z.string().min(1, 'Declaration is required').max(1000),
+    accountHolderName: z.string().max(120).optional(),
+    bankName: z.string().max(120).optional(),
+    accountNumber: z.string().max(40).optional(),
+    branchAndIfsc: z.string().max(120).optional(),
+    serialPrefix: z
+      .string()
+      .max(12, 'Prefix is too long')
+      .regex(/^[A-Za-z0-9\-/]*$/, 'Use letters, numbers, - or /'),
+    nextSerial: wholeNumber(1),
+    serialPadding: wholeNumber(1, 8),
+    defaultUnit: z.string().min(1, 'Unit is required').max(8),
+    defaultGstRatePercent: z.number({ error: 'Enter a number' }).min(0).max(28),
+    defaultPaymentTerms: z.string().min(1, 'Payment terms are required').max(80),
+  })
+  .refine((v) => invoiceNoSchema.safeParse(formatSerial(v)).success, {
+    path: ['serialPrefix'],
+    message: 'Invoice number would be longer than 16 characters',
+  });
 
 type FormValues = z.infer<typeof sellerFormSchema>;
+
+const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
+  businessName: 'Company name',
+  gstin: 'GSTIN',
+  addressLine1: 'Address line 1',
+  city: 'City',
+  pincode: 'PIN code',
+  stateCode: 'State',
+  serialPrefix: 'Invoice prefix',
+  nextSerial: 'Next invoice number',
+  serialPadding: 'Digits',
+};
 
 function formValuesFromStore(
   seller: ReturnType<typeof useAppStore.getState>['seller'],
   settings: ReturnType<typeof useAppStore.getState>['settings'],
 ): FormValues {
+  const hasStructured = [seller.addressLine1, seller.addressLine2, seller.city, seller.pincode].some(
+    (v) => !!v?.trim(),
+  );
+  // Legacy profiles only have a one-line `address`: split it so the user can tidy it into fields.
+  const legacyLines = hasStructured ? [] : sellerAddressLines({ address: seller.address });
   return {
-    businessName: seller.businessName,
+    businessName: singleLineName(seller.businessName),
     tradeName: seller.tradeName ?? '',
-    address: seller.address,
-    gstin: seller.gstin,
     phone: seller.phone ?? '',
+    gstin: seller.gstin,
+    addressLine1: hasStructured ? (seller.addressLine1 ?? '') : (legacyLines[0] ?? '').replace(/,$/, ''),
+    addressLine2: hasStructured
+      ? (seller.addressLine2 ?? '')
+      : legacyLines.slice(1).join(' ').replace(/,$/, ''),
+    city: seller.city ?? '',
+    pincode: seller.pincode ?? '',
     stateCode: seller.stateCode,
     declaration: seller.declaration,
     accountHolderName: seller.bank?.accountHolderName ?? '',
@@ -85,96 +128,93 @@ export default function SettingsScreen() {
     }, [seller, settings, reset]),
   );
 
-  const onSubmit = handleSubmit((data) => {
-    updateSeller({
-      businessName: data.businessName.trim(),
-      tradeName: data.tradeName?.trim(),
-      address: data.address.trim(),
-      gstin: data.gstin.trim().toUpperCase(),
-      phone: data.phone?.trim(),
-      stateCode: data.stateCode,
-      declaration: data.declaration.trim(),
-      bank: {
-        accountHolderName: data.accountHolderName?.trim() ?? '',
-        bankName: data.bankName?.trim() ?? '',
-        accountNumber: data.accountNumber?.trim() ?? '',
-        branchAndIfsc: data.branchAndIfsc?.trim() ?? '',
-      },
-    });
-    updateSettings({
-      serialPrefix: data.serialPrefix.trim(),
-      nextSerial: data.nextSerial,
-      serialPadding: data.serialPadding,
-      defaultUnit: data.defaultUnit.trim(),
-      defaultGstRatePercent: data.defaultGstRatePercent,
-      defaultPaymentTerms: data.defaultPaymentTerms.trim(),
-    });
+  const [serialPrefix, nextSerial, serialPadding] = useWatch({
+    control,
+    name: ['serialPrefix', 'nextSerial', 'serialPadding'],
   });
+  const nextInvoiceNo =
+    Number.isInteger(nextSerial) && Number.isInteger(serialPadding) && nextSerial >= 1 && serialPadding >= 1
+      ? formatSerial({ serialPrefix: serialPrefix ?? '', nextSerial, serialPadding: Math.min(serialPadding, 8) })
+      : '—';
+
+  const onSubmit = handleSubmit(
+    (data) => {
+      const addressParts = {
+        addressLine1: data.addressLine1.trim(),
+        addressLine2: data.addressLine2?.trim() ?? '',
+        city: data.city.trim(),
+        pincode: data.pincode?.trim() ?? '',
+        stateCode: data.stateCode,
+      };
+      updateSeller({
+        businessName: singleLineName(data.businessName),
+        tradeName: data.tradeName?.trim(),
+        ...addressParts,
+        address: joinSellerAddress(addressParts),
+        gstin: data.gstin.trim().toUpperCase(),
+        phone: data.phone?.trim(),
+        declaration: data.declaration.trim(),
+        bank: {
+          accountHolderName: data.accountHolderName?.trim() ?? '',
+          bankName: data.bankName?.trim() ?? '',
+          accountNumber: data.accountNumber?.trim() ?? '',
+          branchAndIfsc: data.branchAndIfsc?.trim() ?? '',
+        },
+      });
+      updateSettings({
+        serialPrefix: data.serialPrefix.trim(),
+        nextSerial: data.nextSerial,
+        serialPadding: data.serialPadding,
+        defaultUnit: data.defaultUnit.trim(),
+        defaultGstRatePercent: data.defaultGstRatePercent,
+        defaultPaymentTerms: data.defaultPaymentTerms.trim(),
+      });
+      Alert.alert('Settings saved', `Next new invoice will be ${formatSerial(data)}.`);
+    },
+    (fieldErrors: FieldErrors<FormValues>) => {
+      const messages = (Object.keys(fieldErrors) as (keyof FormValues)[])
+        .map((key) => {
+          const msg = fieldErrors[key]?.message;
+          return msg ? `${FIELD_LABELS[key] ?? key}: ${msg}` : null;
+        })
+        .filter(Boolean);
+      Alert.alert('Please fix these fields', messages.slice(0, 8).join('\n'));
+    },
+  );
 
   return (
     <ScrollView
       contentContainerStyle={[styles.container, { paddingBottom: spacing.xl + insets.bottom }]}
       keyboardShouldPersistTaps="always"
     >
-      <Section title="Seller profile">
-        <Field label="Business name" error={errors.businessName?.message}>
-          <Controller
-            control={control}
-            name="businessName"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput style={styles.input} value={value} onChangeText={onChange} onBlur={onBlur} />
-            )}
-          />
-        </Field>
-        <Field label="Trade name (optional)" error={errors.tradeName?.message}>
-          <Controller
-            control={control}
-            name="tradeName"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput style={styles.input} value={value} onChangeText={onChange} onBlur={onBlur} />
-            )}
-          />
-        </Field>
-        <Field label="Address" error={errors.address?.message}>
-          <Controller
-            control={control}
-            name="address"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={[styles.input, styles.multiline]}
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                multiline
-              />
-            )}
-          />
-        </Field>
-        <Field label="GSTIN" error={errors.gstin?.message}>
-          <Controller
-            control={control}
-            name="gstin"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={styles.input}
-                value={value}
-                onChangeText={(t) => onChange(t.toUpperCase())}
-                onBlur={onBlur}
-                autoCapitalize="characters"
-                maxLength={15}
-              />
-            )}
-          />
-        </Field>
-        <Field label="Phone" error={errors.phone?.message}>
-          <Controller
-            control={control}
-            name="phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput style={styles.input} value={value} onChangeText={onChange} onBlur={onBlur} keyboardType="phone-pad" />
-            )}
-          />
-        </Field>
+      <Section title="Company">
+        <TextField control={control} errors={errors} name="businessName" label="Company name" placeholder="Registered business name" />
+        <TextField control={control} errors={errors} name="tradeName" label="Trade name (optional)" />
+        <TextField control={control} errors={errors} name="phone" label="Phone" keyboardType="phone-pad" placeholder="+91 98765 43210" />
+        <TextField
+          control={control}
+          errors={errors}
+          name="gstin"
+          label="GST number (GSTIN)"
+          autoCapitalize="characters"
+          maxLength={15}
+          transform={(t) => t.toUpperCase()}
+          placeholder="15-character GSTIN"
+        />
+      </Section>
+
+      <Section title="Billing address">
+        <Text style={styles.hint}>Printed under your company name in the “Billing from” box.</Text>
+        <TextField control={control} errors={errors} name="addressLine1" label="Address line 1" placeholder="Shop / building, street" />
+        <TextField control={control} errors={errors} name="addressLine2" label="Address line 2 (optional)" placeholder="Area, landmark" />
+        <View style={styles.row2}>
+          <View style={styles.flex}>
+            <TextField control={control} errors={errors} name="city" label="City" />
+          </View>
+          <View style={styles.flex}>
+            <TextField control={control} errors={errors} name="pincode" label="PIN code" keyboardType="number-pad" maxLength={6} />
+          </View>
+        </View>
         <Controller
           control={control}
           name="stateCode"
@@ -182,120 +222,45 @@ export default function SettingsScreen() {
             <StatePicker value={value} onChange={onChange} error={errors.stateCode?.message} />
           )}
         />
-        <Field label="Declaration" error={errors.declaration?.message}>
-          <Controller
-            control={control}
-            name="declaration"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={[styles.input, styles.multiline]}
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                multiline
-              />
-            )}
-          />
-        </Field>
       </Section>
 
-      <Section title="Bank details">
-        {(['accountHolderName', 'bankName', 'accountNumber', 'branchAndIfsc'] as const).map((key) => (
-          <Field
-            key={key}
-            label={key === 'branchAndIfsc' ? 'Branch & IFSC' : key.replace(/([A-Z])/g, ' $1')}
-            error={errors[key]?.message}
-          >
-            <Controller
-              control={control}
-              name={key}
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput style={styles.input} value={value} onChangeText={onChange} onBlur={onBlur} />
-              )}
-            />
-          </Field>
-        ))}
+      <Section title="Invoice numbering">
+        <TextField
+          control={control}
+          errors={errors}
+          name="serialPrefix"
+          label="Prefix"
+          autoCapitalize="characters"
+          transform={(t) => t.toUpperCase()}
+          placeholder="e.g. ME26"
+        />
+        <View style={styles.row2}>
+          <View style={styles.flex}>
+            <NumberField control={control} errors={errors} name="nextSerial" label="Next number" />
+          </View>
+          <View style={styles.flex}>
+            <NumberField control={control} errors={errors} name="serialPadding" label="Digits" />
+          </View>
+        </View>
+        <View style={styles.previewBox}>
+          <Text style={styles.previewLabel}>Next new invoice</Text>
+          <Text style={styles.previewValue}>{nextInvoiceNo}</Text>
+        </View>
+      </Section>
+
+      <Section title="Bank account details">
+        <Text style={styles.hint}>Printed in the “Bank Details” box above the invoice footer.</Text>
+        <TextField control={control} errors={errors} name="accountHolderName" label="Account holder name" />
+        <TextField control={control} errors={errors} name="bankName" label="Bank name" />
+        <TextField control={control} errors={errors} name="accountNumber" label="Account number" keyboardType="number-pad" />
+        <TextField control={control} errors={errors} name="branchAndIfsc" label="Branch & IFSC" autoCapitalize="characters" />
       </Section>
 
       <Section title="Invoice defaults">
-        <Field label="Serial prefix" error={errors.serialPrefix?.message}>
-          <Controller
-            control={control}
-            name="serialPrefix"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput style={styles.input} value={value} onChangeText={onChange} onBlur={onBlur} autoCapitalize="characters" />
-            )}
-          />
-        </Field>
-        <View style={styles.row2}>
-          <View style={styles.flex}>
-            <Field label="Next serial" error={errors.nextSerial?.message}>
-              <Controller
-                control={control}
-                name="nextSerial"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.input}
-                    value={String(value)}
-                    onChangeText={(t) => onChange(parseInt(t, 10) || 0)}
-                    onBlur={onBlur}
-                    keyboardType="number-pad"
-                  />
-                )}
-              />
-            </Field>
-          </View>
-          <View style={styles.flex}>
-            <Field label="Padding" error={errors.serialPadding?.message}>
-              <Controller
-                control={control}
-                name="serialPadding"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.input}
-                    value={String(value)}
-                    onChangeText={(t) => onChange(parseInt(t, 10) || 0)}
-                    onBlur={onBlur}
-                    keyboardType="number-pad"
-                  />
-                )}
-              />
-            </Field>
-          </View>
-        </View>
-        <Field label="Default unit" error={errors.defaultUnit?.message}>
-          <Controller
-            control={control}
-            name="defaultUnit"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput style={styles.input} value={value} onChangeText={onChange} onBlur={onBlur} />
-            )}
-          />
-        </Field>
-        <Field label="Default GST %" error={errors.defaultGstRatePercent?.message}>
-          <Controller
-            control={control}
-            name="defaultGstRatePercent"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={styles.input}
-                value={String(value)}
-                onChangeText={(t) => onChange(parseFloat(t) || 0)}
-                onBlur={onBlur}
-                keyboardType="decimal-pad"
-              />
-            )}
-          />
-        </Field>
-        <Field label="Default payment terms" error={errors.defaultPaymentTerms?.message}>
-          <Controller
-            control={control}
-            name="defaultPaymentTerms"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput style={styles.input} value={value} onChangeText={onChange} onBlur={onBlur} />
-            )}
-          />
-        </Field>
+        <TextField control={control} errors={errors} name="defaultUnit" label="Default unit" />
+        <NumberField control={control} errors={errors} name="defaultGstRatePercent" label="Default GST %" decimal />
+        <TextField control={control} errors={errors} name="defaultPaymentTerms" label="Default payment terms" />
+        <TextField control={control} errors={errors} name="declaration" label="Declaration" multiline />
       </Section>
 
       <Pressable
@@ -307,6 +272,86 @@ export default function SettingsScreen() {
         <Text style={styles.saveText}>Save changes</Text>
       </Pressable>
     </ScrollView>
+  );
+}
+
+type StringKey = {
+  [K in keyof FormValues]-?: FormValues[K] extends string | undefined ? K : never;
+}[keyof FormValues];
+
+type NumberKey = {
+  [K in keyof FormValues]-?: FormValues[K] extends number ? K : never;
+}[keyof FormValues];
+
+function TextField({
+  control,
+  errors,
+  name,
+  label,
+  transform,
+  multiline,
+  ...inputProps
+}: {
+  control: Control<FormValues>;
+  errors: FieldErrors<FormValues>;
+  name: StringKey;
+  label: string;
+  transform?: (text: string) => string;
+} & Pick<TextInputProps, 'keyboardType' | 'autoCapitalize' | 'maxLength' | 'placeholder' | 'multiline'>) {
+  return (
+    <Field label={label} error={errors[name]?.message}>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput
+            style={[styles.input, multiline && styles.multiline, errors[name] && styles.inputError]}
+            value={value ?? ''}
+            onChangeText={(t) => onChange(transform ? transform(t) : t)}
+            onBlur={onBlur}
+            multiline={multiline}
+            placeholderTextColor={colors.textMuted}
+            {...inputProps}
+          />
+        )}
+      />
+    </Field>
+  );
+}
+
+/** Numeric input that can be cleared while typing; an empty box is stored as NaN and fails validation. */
+function NumberField({
+  control,
+  errors,
+  name,
+  label,
+  decimal,
+}: {
+  control: Control<FormValues>;
+  errors: FieldErrors<FormValues>;
+  name: NumberKey;
+  label: string;
+  decimal?: boolean;
+}) {
+  return (
+    <Field label={label} error={errors[name]?.message}>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput
+            style={[styles.input, errors[name] && styles.inputError]}
+            value={Number.isNaN(value) ? '' : String(value)}
+            onChangeText={(t) => {
+              const cleaned = t.replace(decimal ? /[^\d.]/g : /\D/g, '');
+              onChange(cleaned === '' ? NaN : decimal ? parseFloat(cleaned) : parseInt(cleaned, 10));
+            }}
+            onBlur={onBlur}
+            keyboardType={decimal ? 'decimal-pad' : 'number-pad'}
+          />
+        )}
+      />
+    </Field>
   );
 }
 
@@ -348,6 +393,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   sectionTitle: { ...typography.subtitle, marginBottom: 4 },
+  hint: { ...typography.caption, marginTop: -4, marginBottom: 4 },
   field: { marginBottom: spacing.sm },
   input: {
     borderWidth: 1,
@@ -359,10 +405,22 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.bg,
   },
+  inputError: { borderColor: colors.danger },
   multiline: { minHeight: 88, textAlignVertical: 'top' },
   row2: { flexDirection: 'row', gap: spacing.md },
   flex: { flex: 1 },
   error: { color: colors.danger, fontSize: 12, marginTop: 4 },
+  previewBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+  },
+  previewLabel: { ...typography.caption, color: colors.primary },
+  previewValue: { fontSize: 16, fontWeight: '700', color: colors.primary },
   saveBtn: {
     backgroundColor: colors.primary,
     borderRadius: radii.md,
